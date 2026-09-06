@@ -1,0 +1,168 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == "moon@astool.com";
+    }
+
+    function hasText(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+
+    function validDriverUpdate(updateId) {
+      let publicVehicle = get(/databases/$(database)/documents/publicVehicles/$(request.resource.data.qrToken));
+      let vehicle = get(/databases/$(database)/documents/vehicles/$(publicVehicle.data.vehicleId));
+      return request.auth == null
+        && request.resource.data.keys().hasOnly([
+          'id', 'vehicleId', 'qrToken', 'plateNumber', 'vehicleName', 'driverName', 'nationalId',
+          'previousMileage', 'newMileage', 'notes', 'faultReported', 'issueId', 'createdAt'
+        ])
+        && request.resource.data.id == updateId
+        && request.resource.data.vehicleId == publicVehicle.data.vehicleId
+        && request.resource.data.plateNumber == publicVehicle.data.licensePlate
+        && request.resource.data.vehicleName == publicVehicle.data.vehicleName
+        && hasText(request.resource.data.driverName, 100)
+        && request.resource.data.nationalId is string
+        && request.resource.data.nationalId.matches('^[0-9]{10}$')
+        && (
+          !vehicle.data.keys().hasAll(['assignedDriverName', 'assignedDriverNationalId'])
+          || (
+            request.resource.data.driverName == vehicle.data.assignedDriverName
+            && request.resource.data.nationalId == vehicle.data.assignedDriverNationalId
+          )
+        )
+        && request.resource.data.previousMileage is int
+        && request.resource.data.newMileage is int
+        && request.resource.data.previousMileage == publicVehicle.data.currentMileage
+        && request.resource.data.newMileage >= request.resource.data.previousMileage
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 800
+        && request.resource.data.faultReported is bool
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/vehicles/$(request.resource.data.vehicleId)).data.currentMileage == request.resource.data.newMileage
+        && getAfter(/databases/$(database)/documents/vehicles/$(request.resource.data.vehicleId)).data.lastDriverUpdateId == updateId
+        && getAfter(/databases/$(database)/documents/publicVehicles/$(request.resource.data.qrToken)).data.currentMileage == request.resource.data.newMileage
+        && getAfter(/databases/$(database)/documents/publicVehicles/$(request.resource.data.qrToken)).data.lastDriverUpdateId == updateId;
+    }
+
+    function validPublicVehicleMileageUpdate(vehicleId) {
+      let updateId = request.resource.data.lastDriverUpdateId;
+      let driverUpdate = getAfter(/databases/$(database)/documents/driverUpdates/$(updateId));
+      return request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentMileage', 'updatedAt', 'lastDriverUpdateId'])
+        && request.resource.data.currentMileage >= resource.data.currentMileage
+        && request.resource.data.updatedAt is int
+        && updateId is string
+        && driverUpdate.data.vehicleId == vehicleId
+        && driverUpdate.data.previousMileage == resource.data.currentMileage
+        && driverUpdate.data.newMileage == request.resource.data.currentMileage;
+    }
+
+    function validPublicAccessMileageUpdate(token) {
+      let updateId = request.resource.data.lastDriverUpdateId;
+      let driverUpdate = getAfter(/databases/$(database)/documents/driverUpdates/$(updateId));
+      return request.auth == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentMileage', 'updatedAt', 'lastDriverUpdateId'])
+        && request.resource.data.currentMileage >= resource.data.currentMileage
+        && request.resource.data.updatedAt is int
+        && updateId is string
+        && driverUpdate.data.qrToken == token
+        && driverUpdate.data.vehicleId == resource.data.vehicleId
+        && driverUpdate.data.previousMileage == resource.data.currentMileage
+        && driverUpdate.data.newMileage == request.resource.data.currentMileage;
+    }
+
+    function validIssue(issueId) {
+      let driverUpdate = getAfter(/databases/$(database)/documents/driverUpdates/$(request.resource.data.driverUpdateId));
+      return request.auth == null
+        && request.resource.data.keys().hasOnly([
+          'id', 'vehicleId', 'driverUpdateId', 'plateNumber', 'vehicleName', 'driverName', 'nationalId',
+          'description', 'priority', 'status', 'createdAt'
+        ])
+        && request.resource.data.id == issueId
+        && request.resource.data.driverUpdateId is string
+        && driverUpdate.data.faultReported == true
+        && request.resource.data.vehicleId == driverUpdate.data.vehicleId
+        && request.resource.data.plateNumber == driverUpdate.data.plateNumber
+        && request.resource.data.vehicleName == driverUpdate.data.vehicleName
+        && request.resource.data.driverName == driverUpdate.data.driverName
+        && request.resource.data.nationalId == driverUpdate.data.nationalId
+        && hasText(request.resource.data.description, 800)
+        && request.resource.data.priority in ['منخفضة', 'متوسطة', 'عالية', 'طارئة']
+        && request.resource.data.status == 'جديد'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.id == driverUpdate.data.issueId;
+    }
+
+    function validDriverAudit(auditId) {
+      let driverUpdate = getAfter(/databases/$(database)/documents/driverUpdates/$(request.resource.data.driverUpdateId));
+      return request.auth == null
+        && request.resource.data.keys().hasOnly([
+          'id', 'actorType', 'actorName', 'actorNationalId', 'action', 'vehicleId', 'plateNumber',
+          'oldData', 'newData', 'driverUpdateId', 'issueId', 'priority', 'createdAt'
+        ])
+        && request.resource.data.id == auditId
+        && request.resource.data.actorType == 'driver'
+        && request.resource.data.actorName == driverUpdate.data.driverName
+        && request.resource.data.actorNationalId == driverUpdate.data.nationalId
+        && request.resource.data.action == 'تحديث ممشى من QR'
+        && request.resource.data.vehicleId == driverUpdate.data.vehicleId
+        && request.resource.data.plateNumber == driverUpdate.data.plateNumber
+        && request.resource.data.driverUpdateId == driverUpdate.data.id
+        && request.resource.data.issueId == driverUpdate.data.issueId
+        && request.resource.data.oldData.currentMileage == driverUpdate.data.previousMileage
+        && request.resource.data.newData.currentMileage == driverUpdate.data.newMileage
+        && request.resource.data.createdAt == request.time;
+    }
+
+    match /publicVehicles/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validPublicAccessMileageUpdate(token);
+    }
+
+    match /publicVehiclePlates/{plateKey} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /vehicles/{vehicleId} {
+      allow read, create, delete: if isAdmin();
+      allow update: if isAdmin() || validPublicVehicleMileageUpdate(vehicleId);
+    }
+
+    match /driverUpdates/{updateId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || validDriverUpdate(updateId);
+    }
+
+    match /vehicleIssues/{issueId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || validIssue(issueId);
+    }
+
+    match /auditLogs/{auditId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || validDriverAudit(auditId);
+    }
+
+    match /rules/{ruleId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /records/{recordId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /plates/{plateKey} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "نظام إدارة أسطول السيارات",
+  "description": "نظام احترافي لإدارة بيانات السيارات، تتبع الصيانة، وتنبيهات تغيير الزيت.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
