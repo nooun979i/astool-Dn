@@ -1,20 +1,66 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+
+# المملكة لإدارة المركبات
+
+### نظام متكامل لإدارة المركبات والصيانة وتغيير الزيوت
+
+**صُمّم وطُوّر بإبداع محمد عمار البطاط**
+
 </div>
 
-# Run and deploy your AI Studio app
+---
 
-This contains everything you need to run your app locally.
+## ✦ عن المشروع
 
-View your app in AI Studio: https://ai.studio/apps/39776b5d-9bdc-4afc-9215-0d9f53814b6c
+نظام رقمي متكامل لإدارة المركبات، متابعة الممشى، تنظيم عمليات الصيانة وتغيير الزيوت، وإدارة التقارير والبيانات من خلال واجهة حديثة وسهلة الاستخدام.
 
-## Run Locally
+تم تصميم وبرمجة النظام بعناية ليكون عمليًا، سريعًا، قابلًا للتوسع، ومناسبًا للاستخدام اليومي.
 
-**Prerequisites:**  Node.js
+---
 
+## ✦ التصميم والتطوير
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+**Designed, Engineered & Developed by**
+
+### محمد عمار البطاط
+
+> **"نحوّل الفكرة إلى تجربة، والكود إلى منتج."**
+
+---
+
+## ✦ التشغيل محليًا
+
+### المتطلبات
+
+* Node.js
+* npm
+
+### تثبيت الاعتماديات
+
+```bash
+npm install
+```
+
+### إعداد مفتاح Gemini
+
+ضع قيمة `GEMINI_API_KEY` داخل ملف:
+
+```text
+.env.local
+```
+
+### تشغيل المشروع
+
+```bash
+npm run dev
+```
+
+---
+
+<div align="center">
+
+### © 2026 محمد عمار البطاط — جميع الحقوق محفوظة
+
+**Designed & Engineered with precision.**
+
+</div>
